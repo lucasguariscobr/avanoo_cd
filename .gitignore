@@ -1,0 +1,8 @@
+.idea/*
+.vscode/*
+.vendor/*
+certs/*
+conf/*
+profile.out
+.DS_Store
+*.code-workspace
