@@ -2,8 +2,11 @@ package utils
 
 import (
 	"encoding/json"
+	"flag"
+	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/go-redis/redis"
 )
@@ -52,13 +55,10 @@ func ReadConfig() func() {
 
 func loadConfigurationFile() *ConfigurationMap {
 	var configuration ConfigurationMap
-	var fileName string
-	if len(os.Args) > 1 {
-		fileName = os.Args[1]
-	} else {
-		fileName = "./conf/configuration.json"
-	}
+	fileName := getConfigurationFileName()
+	fmt.Printf("CONF FILE: %v\n", fileName)
 
+	fileName, _ = filepath.Abs(fileName)
 	file, err := os.Open(fileName)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -89,9 +89,9 @@ func (configuration *ConfigurationMap) connectRedis() *redis.Client {
 func PlaybookPath(branchName string) string {
 	var playbook_path string
 	if checkSpecialBranch(branchName) {
-		playbook_path = Playbooks.DefaultPath
-	} else {
 		playbook_path = Playbooks.SpecialPath
+	} else {
+		playbook_path = Playbooks.DefaultPath
 	}
 	return playbook_path
 }
@@ -108,4 +108,17 @@ func checkSpecialBranch(branchName string) bool {
 		}
 	}
 	return false
+}
+
+func SetConfigurationFlag() {
+	flag.String("config", "./conf/configuration.json", "config file")
+	flag.Parse()
+}
+
+func getConfigurationFileName() string {
+	if !flag.Parsed() {
+		SetConfigurationFlag()
+	}
+	fileName := flag.Lookup("config").Value.(flag.Getter).Get().(string)
+	return fileName
 }

@@ -8,6 +8,8 @@ import (
 	"reflect"
 )
 
+var Env = "development"
+
 type JSONErrror struct {
 	Msg string `json:"msg"`
 }
@@ -56,4 +58,21 @@ func DecodeMsg(r *http.Request, object interface{}, disallow bool) (interface{},
 	}
 
 	return object, nil
+}
+
+func SetEnv(newEnvironment string) {
+	Env = newEnvironment
+}
+
+// HealthCheck godoc
+// @Summary Health check
+// @Description health check
+// @Tags health
+// @Success 200
+// @Failure 400 {object} utils.JSONErrror
+// @Failure 404
+// @Failure 405
+// @Router /health [get]
+func HealthCheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }

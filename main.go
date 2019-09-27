@@ -7,22 +7,23 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 )
 
+var testWG sync.WaitGroup
+
 // @title Avanoo Continuous Delivery
 // @version 1.0
+// @license.name GNU GPLv3
 // @description Automating cd process.
-
 // @contact.name Lucas
 // @contact.email lucas@avanoo.com
-
-// @host control.placeboapp.com
-// @BasePath /
-
+// @host cd.placeboapp.com
 func main() {
 	closeFunc := utils.ReadConfig()
 	closeWebHooksFunc := deploy.CreateDeployContext()
+	deploy.StartBuildAgent()
 	appServer, errApp := server.CreateAppServer(utils.Address)
 	if errApp != nil {
 		log.Fatalf("Server Start Error: %v\n", errApp.Error())
@@ -31,6 +32,7 @@ func main() {
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	checkpoint()
 
 	select {
 	case <-stop:
@@ -43,4 +45,11 @@ func main() {
 	closeWebHooksFunc()
 	closeFunc()
 	log.Printf("Final Shutdown\n")
+	checkpoint()
+}
+
+func checkpoint() {
+	if utils.Env == "test" {
+		testWG.Done()
+	}
 }

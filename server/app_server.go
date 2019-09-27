@@ -8,6 +8,10 @@ import (
 	"net/http"
 	"time"
 
+	_ "avanoo_cd/.docs"
+
+	httpSwagger "github.com/swaggo/http-swagger"
+
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 )
@@ -34,6 +38,7 @@ func (app *AppServer) InitServer() {
 	router.NotFoundHandler = basicHandler.ThenFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	})
+	router.Handle("/health", commonHandlers.ThenFunc(utils.HealthCheck)).Methods("GET", "OPTIONS")
 	router.Handle("/domain", commonHandlers.ThenFunc(deploy.ManageDomain)).Methods("POST", "OPTIONS")
 	router.Handle("/updateDomainBranch", commonHandlers.ThenFunc(deploy.UpdateDomainBranch)).Methods("POST", "OPTIONS")
 	router.Handle("/domains", commonHandlers.ThenFunc(deploy.ListDomains)).Methods("GET", "OPTIONS")
@@ -41,7 +46,7 @@ func (app *AppServer) InitServer() {
 	router.Handle("/domain/{domain}", commonHandlers.ThenFunc(deploy.DeleteDomain)).Methods("DELETE", "OPTIONS")
 	router.Handle("/webhook", commonHandlers.ThenFunc(deploy.ListenWebHookEvent)).Methods("POST", "OPTIONS")
 	router.Handle("/builds", commonHandlers.ThenFunc(deploy.ListBuilds)).Methods("GET", "OPTIONS")
-	//router.Handle("/docs", httpSwagger.WrapHandler).Methods("GET", "OPTIONS")
+	router.PathPrefix("/docs/").Handler(httpSwagger.WrapHandler).Methods("GET", "OPTIONS")
 
 	if app.httpServer != nil {
 		go func() {

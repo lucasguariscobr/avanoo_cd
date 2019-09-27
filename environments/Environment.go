@@ -51,7 +51,8 @@ func updateService(comm *utils.DomainComm, serviceName string, command string, p
 	updateDomainDeployStatus(comm, serviceStatus)
 	builtCommand := buildCommand(command, playbook, branchName, extraVars)
 	cmd := exec.CommandContext(*comm.Ctx, "/bin/bash", "-c", builtCommand)
-	outByte, err := cmd.CombinedOutput()
+	cmd.Dir = utils.PlaybookPath(branchName)
+	outByte, err := utils.ExecCommand(utils.DeployCommand{Commandable: cmd})
 	var output strings.Builder
 	output.Write(outByte)
 	serviceStatus.Command = cmd.String()
@@ -68,10 +69,7 @@ func updateService(comm *utils.DomainComm, serviceName string, command string, p
 
 func buildCommand(command string, playbook string, branchName string, extraVars map[string]string) string {
 	var commandBuilder strings.Builder
-	extraVarsList := buildExtraVarsList(extraVars)
-	playbook_path := utils.PlaybookPath(branchName)
-
-	commandBuilder.WriteString(fmt.Sprintf("cd %s && ", playbook_path))
+	extraVarsList := buildExtraVarsList(extraVars, branchName)
 	commandBuilder.WriteString("ansible-playbook ")
 	commandBuilder.WriteString(command)
 
@@ -84,7 +82,7 @@ func buildCommand(command string, playbook string, branchName string, extraVars 
 	return commandBuilder.String()
 }
 
-func buildExtraVarsList(extraVars map[string]string) []string {
+func buildExtraVarsList(extraVars map[string]string, branchName string) []string {
 	extraVarsList := []string{}
 	for k, v := range extraVars {
 		extraVarsList = append(extraVarsList, k+"="+v)

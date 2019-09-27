@@ -35,7 +35,7 @@ func SendEmail(templateData *EmailTemplateData) {
 	message.AddPersonalizations(&personalizations)
 	message.TemplateID = "d-39fa715383a6455388fa2056bfc59d9e"
 	client := sendgrid.NewSendClient(Email.APIKey)
-	_, err := client.Send(message)
+	_, err := ExecSendEmail(client, message)
 	if err != nil {
 		log.Println(err)
 	}

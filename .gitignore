@@ -4,5 +4,6 @@
 certs/*
 conf/*
 profile.out
+cp.out
 .DS_Store
 *.code-workspace

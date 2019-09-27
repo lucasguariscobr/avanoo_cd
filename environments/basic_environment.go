@@ -5,34 +5,36 @@ import (
 	"sync"
 )
 
-type StageEnvironment struct {
+type BasicEnvironment struct {
 	DomainName string
 	BranchName string
 	HostName   string
 	ExtraVars  map[string]string
 }
 
-func createStageEnvironment(domainName string, brachName string, hostName string, extraVars map[string]string) Environment {
+func createBasicEnvironment(domainName string, branchName string, hostName string, extraVars map[string]string) Environment {
 	return &BasicEnvironment{
 		DomainName: domainName,
-		BranchName: brachName,
+		BranchName: branchName,
 		HostName:   hostName,
 		ExtraVars:  extraVars,
 	}
 }
 
-func (env *StageEnvironment) updateEnvironment(comm *utils.DomainComm, environmentWG *sync.WaitGroup) {
+func (env *BasicEnvironment) updateEnvironment(comm *utils.DomainComm, environmentWG *sync.WaitGroup) {
 	environmentWG.Add(2)
+
+	env.ExtraVars["BRANCH"] = env.BranchName
 	go updateService(comm,
 		"web",
-		"--inventory=inventories/ec2.py -l %s -u ubuntu --private-key \"/home/avanoo/.ssh/id_rsa\" --tags \"app_update\"",
+		"--inventory=inventories/inventory.yml --limit %s --tags \"app_update\"",
 		" app_provision.yml",
 		env.BranchName,
 		env.HostName,
 		env.ExtraVars)
 	go updateService(comm,
 		"background",
-		"--inventory=inventories/ec2.py -l %s -u ubuntu --private-key \"/home/avanoo/.ssh/id_rsa\" --tags \"sidekiq_update\"",
+		"--inventory=inventories/inventory.yml --limit %s --tags \"sidekiq_update\"",
 		" app_provision.yml",
 		env.BranchName,
 		env.HostName,

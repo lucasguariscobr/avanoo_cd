@@ -28,6 +28,7 @@ type BranchComm struct {
 }
 
 const (
+	StatusQueued           = "Queued"
 	StatusStarted          = "Started"
 	StatusBuildError       = "Build Error"
 	StatusBuildCompleted   = "Build Complete"
