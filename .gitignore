@@ -7,3 +7,5 @@ profile.out
 cp.out
 .DS_Store
 *.code-workspace
+.vagrant
+.env

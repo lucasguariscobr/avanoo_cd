@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"avanoo_cd/utils"
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -81,8 +82,8 @@ func ListBuilds(w http.ResponseWriter, r *http.Request) {
 
 func scanBuilds() (map[string]*Build, error) {
 	builds := map[string]*Build{}
-	keyIter := utils.RedisClient.Scan(0, buildNamespace+"*", 100).Iterator()
-	for keyIter.Next() {
+	keyIter := utils.RedisClient.Scan(context.Background(), 0, buildNamespace+"*", 100).Iterator()
+	for keyIter.Next(context.Background()) {
 		buildId := keyIter.Val()
 		build, err := fetchBuildInfo(buildId)
 		if err != nil {
@@ -99,7 +100,7 @@ func scanBuilds() (map[string]*Build, error) {
 }
 
 func fetchBuildInfo(buildId string) (*Build, error) {
-	buildInfo, errRedis := utils.RedisClient.HMGet(buildId, "id", "branch", "date", "domains", "status").Result()
+	buildInfo, errRedis := utils.RedisClient.HMGet(context.Background(), buildId, "id", "branch", "date", "domains", "status").Result()
 	if errRedis != nil {
 		return nil, errRedis
 	}
@@ -151,8 +152,8 @@ func saveBuild(build *Build) error {
 		"status":  build.Status,
 	}
 	buildKey := buildNamespace + build.BuildId
-	utils.RedisClient.HMSet(buildKey, newBuild)
-	err := utils.RedisClient.Expire(buildKey, buildExpiration).Err()
+	utils.RedisClient.HMSet(context.Background(), buildKey, newBuild)
+	err := utils.RedisClient.Expire(context.Background(), buildKey, buildExpiration).Err()
 	return err
 }
 
@@ -173,7 +174,7 @@ func updateBuild(id string, status string) error {
 		"domains": strings.Join(buildInfo.Domains, ","),
 		"status":  status,
 	}
-	err := utils.RedisClient.HMSet(buildKey, updatedBuild).Err()
+	err := utils.RedisClient.HMSet(context.Background(),buildKey, updatedBuild).Err()
 	return err
 }
 

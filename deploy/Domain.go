@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"avanoo_cd/utils"
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -94,7 +95,7 @@ func UpdateDomainBranch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = utils.RedisClient.HSet(domainNamespace+updateDomain.Domain, "branch", updateDomain.Branch).Err()
+	err = utils.RedisClient.HSet(context.Background(), domainNamespace+updateDomain.Domain, "branch", updateDomain.Branch).Err()
 	if err != nil {
 		utils.WriteJSONError(w, err.Error())
 		return
@@ -131,7 +132,7 @@ func DeleteDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := utils.RedisClient.Del(domainNamespace + domainName).Err()
+	err := utils.RedisClient.Del(context.Background(), domainNamespace + domainName).Err()
 	if err != nil {
 		utils.WriteJSONError(w, err.Error())
 		return
@@ -197,8 +198,8 @@ func ListDomains(w http.ResponseWriter, r *http.Request) {
 
 func scanDomains() (map[string]*Domain, error) {
 	domains := map[string]*Domain{}
-	keyIter := utils.RedisClient.Scan(0, domainNamespace+"*", 100).Iterator()
-	for keyIter.Next() {
+	keyIter := utils.RedisClient.Scan(context.Background(), 0, domainNamespace+"*", 100).Iterator()
+	for keyIter.Next(context.Background()) {
 		domainKey := keyIter.Val()
 		domain, err := fetchDomainInfo(domainKey)
 		if err != nil {
@@ -214,7 +215,7 @@ func scanDomains() (map[string]*Domain, error) {
 }
 
 func fetchDomainInfo(domainName string) (*Domain, error) {
-	domainInfo, errRedis := utils.RedisClient.HGetAll(domainName).Result()
+	domainInfo, errRedis := utils.RedisClient.HGetAll(context.Background(), domainName).Result()
 	if errRedis != nil {
 		return nil, errRedis
 	}
@@ -257,7 +258,7 @@ func saveDomain(domain *Domain) error {
 	}
 
 	domainKey := domainNamespace + domain.Domain
-	err := utils.RedisClient.HMSet(domainKey, domainMap).Err()
+	err := utils.RedisClient.HMSet(context.Background(), domainKey, domainMap).Err()
 	return err
 }
 

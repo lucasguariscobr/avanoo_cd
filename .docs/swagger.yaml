@@ -9,13 +9,9 @@ definitions:
         items:
           type: string
         type: array
-      err:
-        type: error
       id:
         type: string
       status:
-        type: string
-      wg:
         type: string
     type: object
   deploy.Domain:
@@ -27,6 +23,8 @@ definitions:
         example: pre.avanoo.com
         type: string
       extra_vars:
+        additionalProperties:
+          type: string
         type: object
       host:
         type: string
@@ -103,7 +101,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/deploy.Domain'
-          type: object
       produces:
       - application/json
       responses:
@@ -184,6 +181,40 @@ paths:
       summary: List all domains
       tags:
       - domains
+  /env:
+    get:
+      description: Download an .env file for your service
+      parameters:
+      - description: Service Name
+        enum:
+        - app
+        in: query
+        name: service
+        required: true
+        type: string
+      - description: Environment Name
+        enum:
+        - development
+        - test
+        - stage
+        - production
+        in: query
+        name: environment
+        required: true
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200": {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.JSONErrror'
+        "404": {}
+        "405": {}
+      summary: Download .env file
+      tags:
+      - env
   /health:
     get:
       description: health check
@@ -212,7 +243,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/deploy.UpdateDomain'
-          type: object
       produces:
       - application/json
       responses:

@@ -32,21 +32,24 @@ type RedisConfig struct {
 }
 
 type ConfigurationMap struct {
-	Address   string         `json:"address"`
-	Redis     RedisConfig    `json:"redis"`
-	Playbooks PlaybookConfig `json:"playbooks"`
-	Email     EmailConfig    `json:"email"`
+	Address   	string         `json:"address"`
+	Redis     	RedisConfig    `json:"redis"`
+	Playbooks 	PlaybookConfig `json:"playbooks"`
+	Email     	EmailConfig    `json:"email"`
+	ConsulToken string		   `json:"consul_token"`	
 }
 
 var Address string
 var Playbooks *PlaybookConfig
 var RedisClient *redis.Client
 var Email *EmailConfig
+var ConsulToken string
 
 // This is the only class allowed to use log.Fatal
 func ReadConfig() func() {
 	configuration := loadConfigurationFile()
 	Address = configuration.Address
+	ConsulToken = configuration.ConsulToken
 	Playbooks = &configuration.Playbooks
 	Email = &configuration.Email
 	RedisClient = configuration.connectRedis()

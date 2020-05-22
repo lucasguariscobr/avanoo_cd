@@ -77,7 +77,6 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
                             "$ref": "#/definitions/deploy.Domain"
                         }
                     }
@@ -190,6 +189,54 @@
                 }
             }
         },
+        "/env": {
+            "get": {
+                "description": "Download an .env file for your service",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "env"
+                ],
+                "summary": "Download .env file",
+                "parameters": [
+                    {
+                        "enum": [
+                            "app"
+                        ],
+                        "type": "string",
+                        "description": "Service Name",
+                        "name": "service",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "development",
+                            "test",
+                            "stage",
+                            "production"
+                        ],
+                        "type": "string",
+                        "description": "Environment Name",
+                        "name": "environment",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {},
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.JSONErrror"
+                        }
+                    },
+                    "404": {},
+                    "405": {}
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "health check",
@@ -230,7 +277,6 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
                             "$ref": "#/definitions/deploy.UpdateDomain"
                         }
                     }
@@ -285,16 +331,10 @@
                         "type": "string"
                     }
                 },
-                "err": {
-                    "type": "error"
-                },
                 "id": {
                     "type": "string"
                 },
                 "status": {
-                    "type": "string"
-                },
-                "wg": {
                     "type": "string"
                 }
             }
@@ -311,7 +351,10 @@
                     "example": "pre.avanoo.com"
                 },
                 "extra_vars": {
-                    "type": "object"
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "host": {
                     "type": "string"

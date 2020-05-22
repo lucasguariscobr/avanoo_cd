@@ -39,6 +39,7 @@ func (app *AppServer) InitServer() {
 		w.WriteHeader(http.StatusNotFound)
 	})
 	router.Handle("/health", commonHandlers.ThenFunc(utils.HealthCheck)).Methods("GET", "OPTIONS")
+	router.Handle("/env", commonHandlers.ThenFunc(utils.ConsulTemplate)).Methods("GET", "OPTIONS")
 	router.Handle("/domain", commonHandlers.ThenFunc(deploy.ManageDomain)).Methods("POST", "OPTIONS")
 	router.Handle("/updateDomainBranch", commonHandlers.ThenFunc(deploy.UpdateDomainBranch)).Methods("POST", "OPTIONS")
 	router.Handle("/domains", commonHandlers.ThenFunc(deploy.ListDomains)).Methods("GET", "OPTIONS")

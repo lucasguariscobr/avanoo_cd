@@ -3,6 +3,7 @@ package deploy
 import (
 	"avanoo_cd/utils"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -27,7 +28,7 @@ type JSONTestRequest struct {
 }
 
 func cleanRedis() {
-	utils.RedisClient.FlushDB()
+	utils.RedisClient.FlushDB(context.Background())
 }
 
 func createTestRequest(requestParams *JSONTestRequest) *httptest.ResponseRecorder {
