@@ -32,8 +32,10 @@ const (
 	StatusStarted          = "Started"
 	StatusBuildError       = "Build Error"
 	StatusBuildCompleted   = "Build Complete"
+	StatusDeployStarted	   = "Deploy Started"
 	StatusDeploySuccessful = "Deploy Successful"
 	StatusDeployError      = "Deploy Error"
+	StatusCanceled		   = "Canceled"
 )
 
 func CheckServicesStatusList(deployStatusList []*DeployStatus) string {

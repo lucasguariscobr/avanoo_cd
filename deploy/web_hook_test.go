@@ -6,6 +6,7 @@ import (
 	"io"
 	"testing"
 	"time"
+	"sort"
 )
 
 func TestListenWebHookEvent(t *testing.T) {
@@ -23,7 +24,7 @@ func TestListenWebHookEvent(t *testing.T) {
 			message: PushJSON{Ref: "refs/heads/development", Deleted: false},
 			status:  204,
 			response: []Build{
-				{Branch: "development", Domains: []string{"pre-temp.avanoo.com"}},
+				{Branch: "development", DomainNames: []string{"pre-temp.avanoo.com"}},
 			},
 		},
 	}
@@ -62,10 +63,12 @@ func TestListenWebHookQueue(t *testing.T) {
 	for i := 0; i < queueUpdatesCount; i++ {
 		body := encodeMessage(&PushJSON{Ref: "refs/heads/development", Deleted: false})
 		testWebHookEndpoint(t, &body, 204)
+		webhookWG.Done()
 		time.Sleep(time.Duration(200) * time.Millisecond)
 	}
 
 	closeWebHooksFunc = CreateDeployContext()
+	StartDeployAgent()
 	StartBuildAgent()
 	webhookWG.Wait()
 
@@ -74,7 +77,9 @@ func TestListenWebHookQueue(t *testing.T) {
 	diff := testEqualModel(
 		buildList,
 		[]Build{
-			{Branch: "development", Domains: []string{"pre-temp.avanoo.com"}, Status: utils.StatusDeploySuccessful}},
+			{Branch: "development", DomainNames: []string{"pre-temp.avanoo.com"}, Status: utils.StatusCanceled},
+			{Branch: "development", DomainNames: []string{"pre-temp.avanoo.com"}, Status: utils.StatusCanceled},
+			{Branch: "development", DomainNames: []string{"pre-temp.avanoo.com"}, Status: utils.StatusDeploySuccessful}},
 		Build{},
 		"BuildId", "Date")
 	if diff != "" {
@@ -136,6 +141,17 @@ func fetchBuildList() []Build {
 	for _, build := range builds {
 		buildList = append(buildList, *build)
 	}
+	sort.SliceStable(buildList,
+		func(i, j int) bool {
+			if buildList[i].Date < buildList[j].Date {
+				return true
+			}
+			if buildList[i].Date > buildList[j].Date {
+				return false
+			}
+			return buildList[i].BuildId < buildList[j].BuildId
+		},
+	)
 	return buildList
 }
 

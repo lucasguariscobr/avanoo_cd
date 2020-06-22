@@ -14,6 +14,7 @@ func TestMain(m *testing.M) {
 	var closeFunc func()
 	closeFunc = utils.ReadConfig()
 	closeWebHooksFunc = CreateDeployContext()
+	StartDeployAgent()
 	StartBuildAgent()
 	result := m.Run()
 	closeWebHooksFunc()
@@ -28,7 +29,7 @@ func TestListBuilds(t *testing.T) {
 	}{
 		"sucess": {
 			builds: []Build{
-				{BuildId: "1", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusQueued},
+				{BuildId: "1", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusQueued},
 			},
 			status: 200,
 		},
@@ -68,46 +69,46 @@ func TestListBuildsWithFilter(t *testing.T) {
 		"queued": {
 			filter: FilterQueued,
 			response: []Build{
-				{BuildId: "1", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusQueued},
+				{BuildId: "1", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusQueued},
 			},
 		},
 		"running": {
 			filter: FilterRunning,
 			response: []Build{
-				{BuildId: "2", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusStarted},
-				{BuildId: "3", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusBuildCompleted},
+				{BuildId: "2", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusStarted},
+				{BuildId: "3", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusBuildCompleted},
 			},
 		},
 		"completed": {
 			filter: FilterCompleted,
 			response: []Build{
-				{BuildId: "4", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusBuildError},
-				{BuildId: "5", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusDeploySuccessful},
-				{BuildId: "6", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusDeployError},
+				{BuildId: "4", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusBuildError},
+				{BuildId: "5", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusDeploySuccessful},
+				{BuildId: "6", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusDeployError},
 			},
 		},
 		"successful": {
 			filter: FilterSuccessful,
 			response: []Build{
-				{BuildId: "5", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusDeploySuccessful},
+				{BuildId: "5", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusDeploySuccessful},
 			},
 		},
 		"failed": {
 			filter: FilterFailed,
 			response: []Build{
-				{BuildId: "4", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusBuildError},
-				{BuildId: "6", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusDeployError},
+				{BuildId: "4", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusBuildError},
+				{BuildId: "6", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusDeployError},
 			},
 		},
 	}
 	cleanRedis()
 	fixtures := []Build{
-		{BuildId: "1", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusQueued},
-		{BuildId: "2", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusStarted},
-		{BuildId: "3", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusBuildCompleted},
-		{BuildId: "4", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusBuildError},
-		{BuildId: "5", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusDeploySuccessful},
-		{BuildId: "6", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusDeployError},
+		{BuildId: "1", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusQueued},
+		{BuildId: "2", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusStarted},
+		{BuildId: "3", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusBuildCompleted},
+		{BuildId: "4", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusBuildError},
+		{BuildId: "5", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusDeploySuccessful},
+		{BuildId: "6", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusDeployError},
 	}
 	for _, fixture := range fixtures {
 		time := time.Now().Format("2006-01-02 15:04:05")
@@ -142,7 +143,7 @@ func TestCreateBuild(t *testing.T) {
 			id:       "1",
 			branch:   "development",
 			domains:  []*Domain{{Domain: "pre.avanoo.com", Branch: "development"}},
-			response: Build{BuildId: "1", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: "Queued"},
+			response: Build{BuildId: "1", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: "Queued"},
 		},
 		"empty domain list": {
 			id:     "1",
@@ -158,7 +159,7 @@ func TestCreateBuild(t *testing.T) {
 				t.Error("Not empty error", err.Error())
 			}
 		} else {
-			diff := testEqualModel(*response, value.response, Build{}, "Date")
+			diff := testEqualModel(*response, value.response, Build{}, "Date", "Domains")
 			if diff != "" {
 				t.Error(diff)
 			}
@@ -174,7 +175,7 @@ func TestUpdateBuild(t *testing.T) {
 		err     error
 	}{
 		"success": {
-			build:   Build{BuildId: "1", Branch: "development", Domains: []string{"pre.avanoo.com"}, Status: utils.StatusQueued},
+			build:   Build{BuildId: "1", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusQueued},
 			updates: []string{utils.StatusStarted, utils.StatusBuildError},
 			err:     nil,
 		},
@@ -185,7 +186,7 @@ func TestUpdateBuild(t *testing.T) {
 		cleanRedis()
 		saveBuild(&value.build)
 		for _, update := range value.updates {
-			err = updateBuild(value.build.BuildId, update)
+			err = updateBuild(&value.build, update)
 		}
 
 		if err != value.err {

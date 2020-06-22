@@ -14,13 +14,17 @@ import (
 )
 
 type Build struct {
-	BuildId string   `json:"id"`
-	Branch  string   `json:"branch"`
-	Domains []string `json:"domains"`
-	Date    string   `json:"date"`
-	Status  string   `json:"status"`
-	wg      *sync.WaitGroup
-	err     error
+	BuildId 		string   	`json:"id"`
+	Branch  		string   	`json:"branch"`
+	Domains			[]*Domain 	`json: "-"`
+	DomainNames 	[]string 	`json:"domains"`
+	Date    		string   	`json:"date"`
+	Status  		string   	`json:"status"`
+	wg      		*sync.WaitGroup
+	context 		context.Context
+	ctxCancelFunc 	func()
+	ctxCanceled		bool
+	err     		error
 }
 
 const (
@@ -113,7 +117,7 @@ func fetchBuildInfo(buildId string) (*Build, error) {
 	build.Date = buildInfo[2].(string)
 	domain_string := buildInfo[3].(string)
 	if domain_string != "" {
-		build.Domains = strings.Split(domain_string, ",")
+		build.DomainNames = strings.Split(domain_string, ",")
 	}
 	build.Status = buildInfo[4].(string)
 
@@ -134,7 +138,8 @@ func createBuild(id string, branchName string, domains []*Domain) (*Build, error
 	build := Build{
 		BuildId: id,
 		Branch:  branchName,
-		Domains: domainNames,
+		Domains: domains,
+		DomainNames: domainNames,
 		Date:    time,
 		Status:  utils.StatusQueued,
 	}
@@ -148,7 +153,7 @@ func saveBuild(build *Build) error {
 		"id":      build.BuildId,
 		"branch":  build.Branch,
 		"date":    build.Date,
-		"domains": strings.Join(build.Domains, ","),
+		"domains": strings.Join(build.DomainNames, ","),
 		"status":  build.Status,
 	}
 	buildKey := buildNamespace + build.BuildId
@@ -157,8 +162,10 @@ func saveBuild(build *Build) error {
 	return err
 }
 
-func updateBuild(id string, status string) error {
-	buildKey := buildNamespace + id
+func updateBuild(build *Build, status string) error {
+	build.Status = status
+
+	buildKey := buildNamespace + build.BuildId
 	buildInfo, errFetch := fetchBuildInfo(buildKey)
 	log.Printf("Build Info: %v", *buildInfo)
 	log.Printf("Update Build: %s", status)
@@ -168,20 +175,20 @@ func updateBuild(id string, status string) error {
 
 	time := time.Now().Format("2006-01-02 15:04:05")
 	updatedBuild := map[string]interface{}{
-		"id":      id,
+		"id":      build.BuildId,
 		"branch":  buildInfo.Branch,
 		"date":    time,
-		"domains": strings.Join(buildInfo.Domains, ","),
+		"domains": strings.Join(buildInfo.DomainNames, ","),
 		"status":  status,
 	}
 	err := utils.RedisClient.HMSet(context.Background(),buildKey, updatedBuild).Err()
 	return err
 }
 
-func completeBuild(id string, comm *utils.BranchComm) error {
+func completeBuild(build *Build, comm *utils.BranchComm) error {
 	responseStatus := utils.CheckStatusList(*comm.BuildStatus)
 	log.Printf("Build is complete %v", responseStatus)
-	return updateBuild(id, responseStatus)
+	return updateBuild(build, responseStatus)
 }
 
 func buildStatusFilter(filter string) []string {
@@ -192,6 +199,7 @@ func buildStatusFilter(filter string) []string {
 	case FilterRunning:
 		statusList = append(statusList, utils.StatusStarted)
 		statusList = append(statusList, utils.StatusBuildCompleted)
+		statusList = append(statusList, utils.StatusDeployStarted)
 	case FilterCompleted:
 		statusList = append(statusList, utils.StatusBuildError)
 		statusList = append(statusList, utils.StatusDeployError)

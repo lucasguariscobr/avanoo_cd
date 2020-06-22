@@ -269,7 +269,7 @@ func findBuildDomains(build *Build) []*Domain {
 	response := []*Domain{}
 
 	domains, _ := scanDomains()
-	for _, buildDomain := range build.Domains {
+	for _, buildDomain := range build.DomainNames {
 		domain, ok := domains[buildDomain]
 		if ok {
 			response = append(response, domain)

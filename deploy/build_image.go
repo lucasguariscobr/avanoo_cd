@@ -7,44 +7,62 @@ import (
 	"log"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
-var queue chan *Build
+var buildQueue chan *Build
+var buildCtx context.Context
+var buildImageWG sync.WaitGroup
 
 func StartBuildAgent() {
-	queue = make(chan *Build)
-	go buildQueue()
+	buildQueue = make(chan *Build)
+	buildCtx, _ = context.WithCancel(webhookCtx)
+	go startBuildQueue()
 	unqueueBuilds()
 }
 
-func buildQueue() {
+func startBuildQueue() {
+	buildImageWG.Add(1)
 	for {
 		select {
-		case <-webhookCtx.Done():
+		case <-buildCtx.Done():
 			log.Printf("Ending Build Queue")
+			buildImageWG.Done()
 			return
-		case currentBuild := <-queue:
-			updateBuild(currentBuild.BuildId, utils.StatusStarted)
-			buildErr := buildImage(currentBuild.Branch, &webhookCtx)
-			currentBuild.err = buildErr
+		case currentBuild := <-buildQueue:
+			updateBuild(currentBuild, utils.StatusStarted)
+			buildImage(currentBuild)
 			currentBuild.wg.Done()
 		}
 	}
 }
 
-func buildImage(branchName string, ctx *context.Context) error {
+func postBuildImage(currentBuild *Build, err error) {
+	if currentBuild.ctxCanceled == true {
+		updateBuild(currentBuild, utils.StatusCanceled)
+	} else if err == nil {
+		updateBuild(currentBuild, utils.StatusBuildCompleted)
+	} else {
+		log.Printf(err.Error())
+		updateBuild(currentBuild, utils.StatusBuildError)
+	}
+	currentBuild.err = err
+}
+
+func buildImage(currentBuild *Build) {
 	log.Printf("Start BuildImage")
-	packer_command := buildCommand(branchName)
-	cmd := exec.CommandContext(*ctx, "/bin/bash", "-c", packer_command)
-	cmd.Dir = utils.PlaybookPath(branchName)
+	packer_command := buildCommand(currentBuild.Branch)
+	cmd := exec.CommandContext(currentBuild.context, "/bin/bash", "-c", packer_command)
+	cmd.Dir = utils.PlaybookPath(currentBuild.Branch)
 	outByte, err := utils.ExecCommand(utils.BuildCommand{Commandable: cmd})
 	var output strings.Builder
 	output.Write(outByte)
 
-	if err != nil {
-		sendBuildErrorEmail(branchName, cmd.String(), output.String(), err.Error())
+	if err != nil && currentBuild.ctxCanceled == false {
+		sendBuildErrorEmail(currentBuild.Branch, cmd.String(), output.String(), err.Error())
 	}
-	return err
+
+	postBuildImage(currentBuild, err)
 }
 
 func buildCommand(branchName string) string {
@@ -77,8 +95,9 @@ func unqueueBuilds() {
 
 	for _, build := range builds {
 		if build.Status == utils.StatusQueued {
-			domains := findBuildDomains(build)
-			deploy(build, domains)
+			webhookWG.Add(1)
+			build.Domains = findBuildDomains(build)
+			deploy(build, build.Domains)
 		}
 	}
 }

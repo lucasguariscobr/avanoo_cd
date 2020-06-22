@@ -23,6 +23,7 @@ var testWG sync.WaitGroup
 func main() {
 	closeFunc := utils.ReadConfig()
 	closeWebHooksFunc := deploy.CreateDeployContext()
+	deploy.StartDeployAgent()
 	deploy.StartBuildAgent()
 	appServer, errApp := server.CreateAppServer(utils.Address)
 	if errApp != nil {

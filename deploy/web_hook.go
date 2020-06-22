@@ -1,7 +1,6 @@
 package deploy
 
 import (
-	"avanoo_cd/environments"
 	"avanoo_cd/utils"
 	"context"
 	"log"
@@ -21,12 +20,16 @@ var githubRef, _ = regexp.Compile("refs/heads/(.*)")
 var webhookCtx context.Context
 var webhookCancelFunc func()
 var webhookWG sync.WaitGroup
+var buildMap map[string]*Build
 
 func CreateDeployContext() func() {
+	buildMap = make(map[string]*Build)
 	webhookCtx, webhookCancelFunc = context.WithCancel(context.Background())
 	return func() {
 		log.Printf("Closing Deploy Context")
 		webhookCancelFunc()
+		deployWG.Wait()
+		buildImageWG.Wait()
 		webhookWG.Wait()
 		log.Printf("Closed Deploy Context")
 	}
@@ -97,11 +100,6 @@ func verifyBranch(branchName string) {
 		return
 	}
 
-	if duplicatedDeploy(branchName) {
-		webhookWG.Done()
-		return
-	}
-
 	releaseBranch(branchName, buildDomains)
 }
 
@@ -112,54 +110,44 @@ func releaseBranch(branchName string, buildDomains []*Domain) {
 		log.Printf(err.Error())
 		return
 	}
+	cancelWaitingBuild(branchName)
+	cancelRunningBuildImage(branchName)
+	buildMap[build.BuildId] = build
 	deploy(build, buildDomains)
 }
 
 func deploy(build *Build, domains []*Domain) {
-	defer webhookWG.Done()
-
-	var domainsWG sync.WaitGroup
 	var buildWG sync.WaitGroup
-
-	comm := utils.BranchComm{}
-	comm.BuildStatus = &[]string{}
-	comm.Ctx = &webhookCtx
-	comm.WG = &domainsWG
-
 	build.wg = &buildWG
+	build.context, build.ctxCancelFunc = context.WithCancel(webhookCtx)
 	buildWG.Add(1)
-	queue <- build
+	buildQueue <- build
 
 	buildWG.Wait()
-	errBuild := build.err
-	if errBuild == nil {
-		defer completeBuild(build.BuildId, &comm)
+	if build.err != nil {
+		delete(buildMap, build.BuildId)
+		webhookWG.Done()
+		return
+	}
 
-		log.Printf("Start environments update")
-		updateBuild(build.BuildId, utils.StatusBuildCompleted)
-		domainsWG.Add(len(domains))
-		for _, domain := range domains {
-			go environments.UpdateEnvironment(&comm, domain.Domain, domain.Branch, domain.Host, domain.ExtraVars)
+	deployQueue <- build
+}
+
+func cancelRunningBuildImage(branchName string) {
+	for _, build := range buildMap {
+		if build.Branch == branchName && build.Status == utils.StatusStarted {
+			build.ctxCanceled = true
+			build.ctxCancelFunc()
+			break
 		}
-		domainsWG.Wait()
-		log.Printf("Stop environments update")
-	} else {
-		log.Printf(errBuild.Error())
-		updateBuild(build.BuildId, utils.StatusBuildError)
 	}
 }
 
-func duplicatedDeploy(branchName string) bool {
-	builds, err := scanBuilds()
-	if err != nil {
-		log.Printf(err.Error())
-		return false
-	}
-
-	for _, build := range builds {
-		if build.Status == utils.StatusQueued && build.Branch == branchName {
-			return true
+func cancelWaitingBuild(branchName string) {
+	for _, build := range buildMap {
+		if build.Branch == branchName && (build.Status == utils.StatusQueued || build.Status == utils.StatusBuildCompleted) {
+			updateBuild(build, utils.StatusCanceled)
+			break
 		}
 	}
-	return false
 }

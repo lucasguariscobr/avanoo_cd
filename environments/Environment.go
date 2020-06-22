@@ -70,7 +70,7 @@ func updateService(comm *utils.DomainComm, serviceName string, command string, p
 func buildCommand(command string, playbook string, branchName string, extraVars map[string]string) string {
 	var commandBuilder strings.Builder
 	extraVarsList := buildExtraVarsList(extraVars, branchName)
-	commandBuilder.WriteString("ansible-playbook ")
+	commandBuilder.WriteString("ANSIBLE_STDOUT_CALLBACK=debug ansible-playbook ")
 	commandBuilder.WriteString(command)
 
 	if len(extraVarsList) > 0 {
