@@ -39,6 +39,7 @@ func ConsulTemplate(w http.ResponseWriter, r *http.Request) {
 	outputFile := fmt.Sprintf("/tmp/.env.%s.%s", serviceName, environmentName)
 	commandBuilder.WriteString(fmt.Sprintf("CONSUL_TEMPLATE_SERVICE=%s ", serviceName))
 	commandBuilder.WriteString(fmt.Sprintf("CONSUL_TEMPLATE_ENVIRONMENT=%s ", environmentName))
+	commandBuilder.WriteString(fmt.Sprintf("CONSUL_HTTP_ADDR=%s ", ConsulAddr))
 	commandBuilder.WriteString(fmt.Sprintf("CONSUL_HTTP_TOKEN=%s ", ConsulToken))
 	commandBuilder.WriteString(fmt.Sprintf("consul-template -template \"%s/service_env_template.tcl:%s\" -once", Playbooks.DefaultPath, outputFile))
 
