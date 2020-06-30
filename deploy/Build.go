@@ -16,7 +16,7 @@ import (
 type Build struct {
 	BuildId 		string   	`json:"id"`
 	Branch  		string   	`json:"branch"`
-	Domains			[]*Domain 	`json: "-"`
+	Domains			[]*Domain 	`json:"-" swaggerignore:"true"`
 	DomainNames 	[]string 	`json:"domains"`
 	Date    		string   	`json:"date"`
 	Status  		string   	`json:"status"`
@@ -30,6 +30,7 @@ type Build struct {
 const (
 	FilterQueued     = "queued"
 	FilterRunning    = "running"
+	FilterCanceled	 = "canceled"
 	FilterCompleted  = "completed"
 	FilterSuccessful = "successful"
 	FilterFailed     = "failed"
@@ -43,7 +44,7 @@ var buildExpiration, _ = time.ParseDuration("168h")
 // @Description Returns the list of builds executed by the service.
 // @Description Only branches that are connected to a domain have their docker images generated.
 // @Description The build information is kept for one week.
-// @Param filter query string false "Filter Builds" Enums(queued, running, completed, successful, failed)
+// @Param filter query string false "Filter Builds" Enums(queued, running, canceled, completed, successful, failed)
 // @Tags builds
 // @Produce  json
 // @Success 200 {object} deploy.Build
@@ -200,6 +201,8 @@ func buildStatusFilter(filter string) []string {
 		statusList = append(statusList, utils.StatusStarted)
 		statusList = append(statusList, utils.StatusBuildCompleted)
 		statusList = append(statusList, utils.StatusDeployStarted)
+	case FilterCanceled:
+		statusList = append(statusList, utils.StatusCanceled)
 	case FilterCompleted:
 		statusList = append(statusList, utils.StatusBuildError)
 		statusList = append(statusList, utils.StatusDeployError)

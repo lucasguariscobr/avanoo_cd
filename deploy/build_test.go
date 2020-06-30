@@ -79,6 +79,12 @@ func TestListBuildsWithFilter(t *testing.T) {
 				{BuildId: "3", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusBuildCompleted},
 			},
 		},
+		"canceled": {
+			filter: FilterCanceled,
+			response: []Build{
+				{BuildId: "7", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusCanceled},
+			},
+		},
 		"completed": {
 			filter: FilterCompleted,
 			response: []Build{
@@ -109,6 +115,7 @@ func TestListBuildsWithFilter(t *testing.T) {
 		{BuildId: "4", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusBuildError},
 		{BuildId: "5", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusDeploySuccessful},
 		{BuildId: "6", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusDeployError},
+		{BuildId: "7", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusCanceled},
 	}
 	for _, fixture := range fixtures {
 		time := time.Now().Format("2006-01-02 15:04:05")
