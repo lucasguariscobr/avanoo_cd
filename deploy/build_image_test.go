@@ -26,3 +26,44 @@ func TestBuildImageError(t *testing.T) {
 		t.Error("Build error not tracked")
 	}
 }
+
+func TestDomainEnvironments(t *testing.T) {
+	cases := map[string]struct {
+		domains       	[]*Domain
+		build			Build
+		expected 		[]string
+	}{
+		"all": {
+			domains: []*Domain{
+				{Domain: "pre.avanoo.com", Branch: "development", Host: "pre", ExtraVars: map[string]string{}},
+				{Domain: "prodtest.avanoo.com", Branch: "development", Host: "prodtest", ExtraVars: map[string]string{}},
+			},
+			build: Build{BuildId: "1", Branch: "development", DomainNames: []string{"pre.avanoo.com", "prodtest.avanoo.com"}, Status: utils.StatusQueued},
+			expected: []string{"stage", "production"},
+		},
+		"pre": {
+			domains: []*Domain{
+				{Domain: "pre.avanoo.com", Branch: "development", Host: "pre", ExtraVars: map[string]string{}},
+			},
+			build: Build{BuildId: "1", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusQueued},
+			expected: []string{"stage"},
+		},
+		"prod": {
+			domains: []*Domain{
+				{Domain: "prodtest.avanoo.com", Branch: "development", Host: "prodtest", ExtraVars: map[string]string{}},
+			},
+			build: Build{BuildId: "1", Branch: "development", DomainNames: []string{"prodtest.avanoo.com"}, Status: utils.StatusQueued},
+			expected: []string{"production"},
+		},
+	}
+	for _, value := range cases {
+		cleanRedis()
+		value.build.Domains = value.domains
+		environments := getDomainEnvironments(&value.build)
+		diff := testEqualObject(environments, value.expected)
+		if diff != "" {
+			t.Error(diff)
+		}
+	}
+
+}

@@ -64,7 +64,7 @@ func TestListenWebHookQueue(t *testing.T) {
 		body := encodeMessage(&PushJSON{Ref: "refs/heads/development", Deleted: false})
 		testWebHookEndpoint(t, &body, 204)
 		webhookWG.Done()
-		time.Sleep(time.Duration(300) * time.Millisecond)
+		time.Sleep(time.Duration(1000) * time.Millisecond)
 	}
 
 	closeWebHooksFunc = CreateDeployContext()

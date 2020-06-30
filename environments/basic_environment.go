@@ -28,14 +28,14 @@ func (env *BasicEnvironment) updateEnvironment(comm *utils.DomainComm, environme
 	go updateService(comm,
 		"web",
 		"--inventory=inventories/inventory.yml --limit %s --tags \"app_update\"",
-		" app_provision.yml",
+		" deploy.yml",
 		env.BranchName,
 		env.HostName,
 		env.ExtraVars)
 	go updateService(comm,
 		"background",
 		"--inventory=inventories/inventory.yml --limit %s --tags \"sidekiq_update\"",
-		" app_provision.yml",
+		" deploy.yml",
 		env.BranchName,
 		env.HostName,
 		env.ExtraVars)

@@ -17,7 +17,9 @@ var buildImageWG sync.WaitGroup
 func StartBuildAgent() {
 	buildQueue = make(chan *Build)
 	buildCtx, _ = context.WithCancel(webhookCtx)
-	go startBuildQueue()
+	for i:=0; i < utils.BuildImageAgents; i ++ {
+		go startBuildQueue()
+	}
 	unqueueBuilds()
 }
 
@@ -31,10 +33,90 @@ func startBuildQueue() {
 			return
 		case currentBuild := <-buildQueue:
 			updateBuild(currentBuild, utils.StatusStarted)
-			buildImage(currentBuild)
+			runBuild(currentBuild)
 			currentBuild.wg.Done()
 		}
 	}
+}
+
+func runBuild(currentBuild *Build) {
+	var runBuildWG sync.WaitGroup
+
+	docker_command := buildDockerCommand(currentBuild.Branch)
+	err, ok := execBuildCommand(currentBuild, docker_command)
+	if !ok {
+		postBuildImage(currentBuild, err)
+		return
+	}
+
+	environments := getDomainEnvironments(currentBuild)
+	for _, environment := range environments {
+		runBuildWG.Add(1)
+		go pre_deploy(currentBuild, environment, &runBuildWG)
+	}
+	runBuildWG.Wait()
+}
+
+
+func buildDockerCommand(branchName string) string {
+	var commandBuilder strings.Builder
+	commandBuilder.WriteString(fmt.Sprintf("packer build -var \"BRANCH=%s\" app_docker.json ", branchName))
+	return commandBuilder.String()
+}
+
+func pre_deploy(currentBuild *Build, environment string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	command := buildPreDeployCommand(currentBuild.Branch, environment)
+	err, _ := execBuildCommand(currentBuild, command)
+	if currentBuild.Status == utils.StatusCanceled || currentBuild.Status == utils.StatusBuildError {
+		return
+	}
+	postBuildImage(currentBuild, err)
+}
+
+func buildPreDeployCommand(branchName string, environment string) string {
+	var commandBuilder strings.Builder
+	commandBuilder.WriteString("ansible-playbook --inventory=127.0.0.1, -c local ")
+	commandBuilder.WriteString(fmt.Sprintf("--extra-vars \"BRANCH=%s RAILS_ENV=%s\" pre_deploy.yml", branchName, environment))
+	return commandBuilder.String()
+}
+
+func execBuildCommand(currentBuild *Build, builtCommand string) (error, bool) {
+	cmd := exec.CommandContext(currentBuild.context, "/bin/bash", "-c", builtCommand)
+	cmd.Dir = utils.PlaybookPath(currentBuild.Branch)
+	outByte, err := utils.ExecCommand(utils.BuildCommand{Commandable: cmd})
+	var output strings.Builder
+	output.Write(outByte)
+
+	if err != nil && currentBuild.ctxCanceled == false {
+		sendBuildErrorEmail(currentBuild.Branch, cmd.String(), output.String(), err.Error())
+		return err, false
+	}
+	
+	return err, true
+}
+
+func getDomainEnvironments(currentBuild *Build) []string {
+	environments := []string{}
+	environmentMap := map[string]string{}
+	var ok bool
+	for _, domain := range currentBuild.Domains {
+		_, ok = environmentMap[domain.Host]
+		if !ok {
+			switch(domain.Host) {
+			case "pre": 
+				environmentMap[domain.Host] = "stage"	
+			case "prodtest": 
+				environmentMap[domain.Host] = "production"
+			}
+		}
+	}
+	for _, value := range environmentMap {
+		environments = append(environments, value)
+	}
+
+	return environments
 }
 
 func postBuildImage(currentBuild *Build, err error) {
@@ -47,28 +129,6 @@ func postBuildImage(currentBuild *Build, err error) {
 		updateBuild(currentBuild, utils.StatusBuildError)
 	}
 	currentBuild.err = err
-}
-
-func buildImage(currentBuild *Build) {
-	log.Printf("Start BuildImage")
-	packer_command := buildCommand(currentBuild.Branch)
-	cmd := exec.CommandContext(currentBuild.context, "/bin/bash", "-c", packer_command)
-	cmd.Dir = utils.PlaybookPath(currentBuild.Branch)
-	outByte, err := utils.ExecCommand(utils.BuildCommand{Commandable: cmd})
-	var output strings.Builder
-	output.Write(outByte)
-
-	if err != nil && currentBuild.ctxCanceled == false {
-		sendBuildErrorEmail(currentBuild.Branch, cmd.String(), output.String(), err.Error())
-	}
-
-	postBuildImage(currentBuild, err)
-}
-
-func buildCommand(branchName string) string {
-	var commandBuilder strings.Builder
-	commandBuilder.WriteString(fmt.Sprintf("packer build -var \"BRANCH=%s\" app_docker.json ", branchName))
-	return commandBuilder.String()
 }
 
 func sendBuildErrorEmail(branchName string, command string, output string, errorMsg string) {

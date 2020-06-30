@@ -17,7 +17,7 @@ func StartDeployAgent() {
 	waitingMap = make(map[string]*Build)
 	runningMap = make(map[string]*Build)
 	deployQueue = make(chan *Build)
-	for i:=0; i < 2; i ++ {
+	for i:=0; i < utils.DeployAgents; i ++ {
 		go startDeployQueue()
 	}
 }

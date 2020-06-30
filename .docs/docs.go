@@ -45,6 +45,7 @@ var doc = `{
                         "enum": [
                             "queued",
                             "running",
+                            "canceled",
                             "completed",
                             "successful",
                             "failed"

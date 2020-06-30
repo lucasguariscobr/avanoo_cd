@@ -36,7 +36,7 @@ func (env *StageEnvironment) updateEnvironment(comm *utils.DomainComm, environme
 	go updateService(comm,
 		"web",
 		"--inventory=inventories/ec2.py -l %s -u ubuntu --private-key \"/home/avanoo/.ssh/id_rsa\" --tags \"app_update\"",
-		" app_provision.yml",
+		" deploy.yml",
 		env.BranchName,
 		"tag_aws_autoscaling_groupName_stage",
 		webExtraVars)
@@ -46,7 +46,7 @@ func (env *StageEnvironment) updateEnvironment(comm *utils.DomainComm, environme
 	go updateService(comm,
 		"background",
 		"--inventory=inventories/ec2.py -l %s -u ubuntu --private-key \"/home/avanoo/.ssh/id_rsa\" --tags \"sidekiq_update\"",
-		" app_provision.yml",
+		" deploy.yml",
 		env.BranchName,
 		"tag_aws_autoscaling_groupName_stage_bg",
 		backgroundbExtraVars)
