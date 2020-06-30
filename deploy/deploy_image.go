@@ -38,13 +38,13 @@ func startDeployQueue() {
 				continue
 			}
 
-			_, ok := runningMap[build.BuildId]
+			_, ok := runningMap[build.Branch]
 			if !ok {
-				runningMap[build.BuildId] = build
+				runningMap[build.Branch] = build
 				updateBuild(build, utils.StatusDeployStarted)
 				runDeploy(build, &deployCtx)
 			} else {
-				waitingMap[build.BuildId] = build
+				waitingMap[build.Branch] = build
 			}
 		}
 	}
@@ -53,7 +53,7 @@ func startDeployQueue() {
 func runDeploy(currentBuild *Build, deployCtx *context.Context) {
 	defer webhookWG.Done()
 	defer postDeploy(currentBuild.Branch)
-	defer delete(runningMap, currentBuild.BuildId)
+	defer delete(runningMap, currentBuild.Branch)
 	defer delete(buildMap, currentBuild.BuildId)
 	
 	var domainsWG sync.WaitGroup
