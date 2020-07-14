@@ -32,7 +32,9 @@ func LoggingHandler(next http.Handler) http.Handler {
 		lw := NewLoggingResponseWriter(w)
 		next.ServeHTTP(lw, r)
 		t2 := time.Now()
-		log.Printf("[%s] %q %v %v %v\n", r.Method, r.URL.String(), lw.statusCode, lw.responseSize, t2.Sub(t1))
+		if r.URL.String() != "/health" {
+			log.Printf("[%s] %q %v %v %v\n", r.Method, r.URL.String(), lw.statusCode, lw.responseSize, t2.Sub(t1))
+		}
 	}
 
 	return http.HandlerFunc(fn)
