@@ -37,7 +37,7 @@ const (
 )
 
 var buildNamespace = "build_"
-var buildExpiration, _ = time.ParseDuration("168h")
+var buildExpiration, _ = time.ParseDuration("36h")
 
 // ListBuilds godoc
 // @Summary List all builds
