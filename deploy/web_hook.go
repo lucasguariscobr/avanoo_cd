@@ -21,6 +21,7 @@ var webhookCtx context.Context
 var webhookCancelFunc func()
 var webhookWG sync.WaitGroup
 var buildMap map[string]*Build
+var buildMutex = &sync.Mutex{}
 
 func CreateDeployContext() func() {
 	buildMap = make(map[string]*Build)
@@ -112,7 +113,9 @@ func releaseBranch(branchName string, buildDomains []*Domain) {
 	}
 	cancelWaitingBuild(branchName)
 	cancelRunningBuildImage(branchName)
+	buildMutex.Lock()
 	buildMap[build.BuildId] = build
+	buildMutex.Unlock()
 	deploy(build, buildDomains)
 }
 
@@ -125,7 +128,9 @@ func deploy(build *Build, domains []*Domain) {
 
 	buildWG.Wait()
 	if build.err != nil {
+		buildMutex.Lock()
 		delete(buildMap, build.BuildId)
+		buildMutex.Unlock()
 		webhookWG.Done()
 		return
 	}
@@ -134,20 +139,26 @@ func deploy(build *Build, domains []*Domain) {
 }
 
 func cancelRunningBuildImage(branchName string) {
+	buildMutex.Lock()
 	for _, build := range buildMap {
 		if build.Branch == branchName && build.Status == utils.StatusStarted {
+			log.Printf("Cancel Build: %v", *build)
 			build.ctxCanceled = true
 			build.ctxCancelFunc()
 			break
 		}
 	}
+	buildMutex.Unlock()
 }
 
 func cancelWaitingBuild(branchName string) {
+	buildMutex.Lock()
 	for _, build := range buildMap {
 		if build.Branch == branchName && (build.Status == utils.StatusQueued || build.Status == utils.StatusBuildCompleted) {
+			log.Printf("Cancel Build: %v", *build)
 			updateBuild(build, utils.StatusCanceled)
 			break
 		}
 	}
+	buildMutex.Unlock()
 }

@@ -12,11 +12,13 @@ var waitingMap map[string]*Build
 var runningMap map[string]*Build
 var deployQueue chan *Build
 var deployWG sync.WaitGroup
+var deployCtx context.Context
 
 func StartDeployAgent() {
 	waitingMap = make(map[string]*Build)
 	runningMap = make(map[string]*Build)
 	deployQueue = make(chan *Build)
+	deployCtx, _ = context.WithCancel(webhookCtx)
 	for i:=0; i < utils.DeployAgents; i ++ {
 		go startDeployQueue()
 	}
@@ -24,8 +26,6 @@ func StartDeployAgent() {
 
 func startDeployQueue() {
 	deployWG.Add(1)
-	deployCtx, _ := context.WithCancel(webhookCtx)
-
 	for {
 		select {
 		case <-deployCtx.Done():
@@ -42,7 +42,7 @@ func startDeployQueue() {
 			if !ok {
 				runningMap[build.Branch] = build
 				updateBuild(build, utils.StatusDeployStarted)
-				runDeploy(build, &deployCtx)
+				runDeploy(build)
 			} else {
 				waitingMap[build.Branch] = build
 			}
@@ -50,16 +50,16 @@ func startDeployQueue() {
 	}
 }
 
-func runDeploy(currentBuild *Build, deployCtx *context.Context) {
+func runDeploy(currentBuild *Build) {
 	defer webhookWG.Done()
 	defer postDeploy(currentBuild.Branch)
 	defer delete(runningMap, currentBuild.Branch)
-	defer delete(buildMap, currentBuild.BuildId)
+	defer updateBuildMap(currentBuild.BuildId)
 	
 	var domainsWG sync.WaitGroup
 	comm := utils.BranchComm{}
 	comm.BuildStatus = &[]string{}
-	comm.Ctx = deployCtx
+	comm.Ctx = &deployCtx
 	comm.WG = &domainsWG
 	
 	defer completeBuild(currentBuild, &comm)	
@@ -70,6 +70,12 @@ func runDeploy(currentBuild *Build, deployCtx *context.Context) {
 	}
 	domainsWG.Wait()
 	log.Printf("Stop environments update")
+}
+
+func updateBuildMap(buildId string) {
+	buildMutex.Lock()
+	delete(buildMap, buildId)
+	buildMutex.Unlock()
 }
 
 func postDeploy(branch string) {
