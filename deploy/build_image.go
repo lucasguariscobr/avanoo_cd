@@ -42,8 +42,8 @@ func startBuildQueue() {
 func runBuild(currentBuild *Build) {
 	var runBuildWG sync.WaitGroup
 
-	docker_command := buildDockerCommand(currentBuild.Branch)
-	err, ok := execBuildCommand(currentBuild, docker_command)
+	packerExec, packerArgs := buildDockerCommand(currentBuild.Branch)
+	err, ok := execBuildCommand(currentBuild, packerExec, packerArgs)
 	if !ok {
 		postBuildImage(currentBuild, err)
 		return
@@ -58,32 +58,34 @@ func runBuild(currentBuild *Build) {
 }
 
 
-func buildDockerCommand(branchName string) string {
-	var commandBuilder strings.Builder
-	commandBuilder.WriteString(fmt.Sprintf("packer build -var \"BRANCH=%s\" app_docker.json ", branchName))
-	return commandBuilder.String()
+func buildDockerCommand(branchName string) (string, []string) {
+	packerExecutable := "/usr/local/bin/packer"
+	commandBuilder := []string{"build", "-var"}
+	commandBuilder = append(commandBuilder, fmt.Sprintf("\"BRANCH=%s\"", branchName))
+	commandBuilder = append(commandBuilder, "app_docker.json")
+	return packerExecutable, commandBuilder
 }
 
 func pre_deploy(currentBuild *Build, environment string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	command := buildPreDeployCommand(currentBuild.Branch, environment)
-	err, _ := execBuildCommand(currentBuild, command)
+	ansibleExec, ansibleArgs := buildPreDeployCommand(currentBuild.Branch, environment)
+	err, _ := execBuildCommand(currentBuild, ansibleExec, ansibleArgs)
 	if currentBuild.Status == utils.StatusCanceled || currentBuild.Status == utils.StatusBuildError {
 		return
 	}
 	postBuildImage(currentBuild, err)
 }
 
-func buildPreDeployCommand(branchName string, environment string) string {
-	var commandBuilder strings.Builder
-	commandBuilder.WriteString("ansible-playbook --inventory=127.0.0.1, -c local ")
-	commandBuilder.WriteString(fmt.Sprintf("--extra-vars \"BRANCH=%s RAILS_ENV=%s\" pre_deploy.yml", branchName, environment))
-	return commandBuilder.String()
+func buildPreDeployCommand(branchName string, environment string) (string, []string) {
+	ansibleExecutable := "/bin/bash"
+	commandBuilder := []string{"-c"}
+	commandBuilder = append(commandBuilder, fmt.Sprintf("ansible-playbook --inventory=127.0.0.1, -c local -e \"BRANCH=%s RAILS_ENV=%s\" pre_deploy.yml", branchName, environment))
+	return ansibleExecutable, commandBuilder
 }
 
-func execBuildCommand(currentBuild *Build, builtCommand string) (error, bool) {
-	cmd := exec.CommandContext(currentBuild.context, "/bin/bash", "-c", builtCommand)
+func execBuildCommand(currentBuild *Build, commandExecutable string, commandArgs []string) (error, bool) {
+	cmd := exec.CommandContext(currentBuild.context, commandExecutable, commandArgs...)
 	cmd.Dir = utils.PlaybookPath(currentBuild.Branch)
 	outByte, err := utils.ExecCommand(utils.BuildCommand{Commandable: cmd})
 	var output strings.Builder
