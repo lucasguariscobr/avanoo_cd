@@ -105,7 +105,7 @@ func verifyBranch(branchName string) {
 }
 
 func releaseBranch(branchName string, buildDomains []*Domain) {
-	uuid, _ := uuid2.NewV4()
+	uuid := uuid2.NewV4()
 	build, err := createBuild(uuid.String(), branchName, buildDomains)
 	if err != nil {
 		log.Printf(err.Error())
