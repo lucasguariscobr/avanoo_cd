@@ -17,10 +17,12 @@ require (
     github.com/avanoo/avanoo_cd/deploy v0.0.0-00010101000000-000000000000
     github.com/avanoo/avanoo_cd/server v0.0.0-00010101000000-000000000000
     github.com/avanoo/avanoo_cd/utils v0.0.0-00010101000000-000000000000
+    github.com/avanoo/avanoo_cd/environments v0.0.0-00010101000000-000000000000
     github.com/avanoo/avanoo_cd/.docs v0.0.0-00010101000000-000000000000
 )
 
-replace github.com/avanoo/avanoo_cd/deploy  => ./deploy
-replace github.com/avanoo/avanoo_cd/server  => ./server
-replace github.com/avanoo/avanoo_cd/utils   => ./utils
-replace github.com/avanoo/avanoo_cd/.docs   => ./.docs
+replace github.com/avanoo/avanoo_cd/deploy          => ./deploy
+replace github.com/avanoo/avanoo_cd/server          => ./server
+replace github.com/avanoo/avanoo_cd/utils           => ./utils
+replace github.com/avanoo/avanoo_cd/environments    => ./environments
+replace github.com/avanoo/avanoo_cd/.docs           => ./.docs
