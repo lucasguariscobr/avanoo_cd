@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 	"sync"
-	"avanoo_cd/utils"
-	"avanoo_cd/environments"
+	"github.com/avanoo/avanoo_cd/utils"
+	"github.com/avanoo/avanoo_cd/environments"
 )
 
 var waitingMap map[string]*Build
