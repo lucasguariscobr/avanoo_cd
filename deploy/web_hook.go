@@ -112,7 +112,7 @@ func releaseBranch(branchName string, buildDomains []*Domain) {
 		return
 	}
 	cancelWaitingBuild(branchName)
-	cancelRunningBuildImage(branchName)
+	//cancelRunningBuildImage(branchName)
 	buildMutex.Lock()
 	buildMap[build.BuildId] = build
 	buildMutex.Unlock()

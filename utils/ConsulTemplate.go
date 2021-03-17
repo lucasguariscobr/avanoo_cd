@@ -11,7 +11,7 @@ import (
 // Env godoc
 // @Summary Download .env file
 // @Description Download an .env file for your service
-// @Param service query string true "Service Name" Enums(app)
+// @Param service query string true "Service Name" Enums(app, frontend)
 // @Param environment query string true "Environment Name" Enums(development, test, stage, production)
 // @Tags env
 // @Produce plain

@@ -50,26 +50,25 @@ func runBuild(currentBuild *Build) {
 	}
 
 	environments := getDomainEnvironments(currentBuild)
-	for _, environment := range environments {
+	for host, environment := range environments {
 		runBuildWG.Add(1)
-		go pre_deploy(currentBuild, environment, &runBuildWG)
+		go pre_deploy(currentBuild, &runBuildWG, environment, host)
 	}
 	runBuildWG.Wait()
 }
 
 
 func buildDockerCommand(branchName string) (string, []string) {
-	packerExecutable := "/usr/local/bin/packer"
-	commandBuilder := []string{"build", "-var"}
-	commandBuilder = append(commandBuilder, fmt.Sprintf("\"BRANCH=%s\"", branchName))
-	commandBuilder = append(commandBuilder, "app_docker.json")
+	packerExecutable := "/bin/bash"
+	commandBuilder := []string{"-c"}
+	commandBuilder = append(commandBuilder, fmt.Sprintf("packer build -var \"BRANCH=%s\" app_docker.json", branchName))
 	return packerExecutable, commandBuilder
 }
 
-func pre_deploy(currentBuild *Build, environment string, wg *sync.WaitGroup) {
+func pre_deploy(currentBuild *Build, wg *sync.WaitGroup, environment string, domain string ) {
 	defer wg.Done()
 
-	ansibleExec, ansibleArgs := buildPreDeployCommand(currentBuild.Branch, environment)
+	ansibleExec, ansibleArgs := buildPreDeployCommand(currentBuild.Branch, environment, domain)
 	err, _ := execBuildCommand(currentBuild, ansibleExec, ansibleArgs)
 	if currentBuild.Status == utils.StatusCanceled || currentBuild.Status == utils.StatusBuildError {
 		return
@@ -77,10 +76,10 @@ func pre_deploy(currentBuild *Build, environment string, wg *sync.WaitGroup) {
 	postBuildImage(currentBuild, err)
 }
 
-func buildPreDeployCommand(branchName string, environment string) (string, []string) {
+func buildPreDeployCommand(branchName string, environment string, domain string) (string, []string) {
 	ansibleExecutable := "/bin/bash"
 	commandBuilder := []string{"-c"}
-	commandBuilder = append(commandBuilder, fmt.Sprintf("ansible-playbook --inventory=127.0.0.1, -c local -e \"BRANCH=%s RAILS_ENV=%s\" pre_deploy.yml", branchName, environment))
+	commandBuilder = append(commandBuilder, fmt.Sprintf("ansible-playbook --inventory=127.0.0.1, -c local -e \"BRANCH=%s RAILS_ENV=%s DOMAIN_NAME=%s\" pre_deploy.yml", branchName, environment, domain))
 	return ansibleExecutable, commandBuilder
 }
 
@@ -99,7 +98,7 @@ func execBuildCommand(currentBuild *Build, commandExecutable string, commandArgs
 	return err, true
 }
 
-func getDomainEnvironments(currentBuild *Build) []string {
+func getDomainEnvironments(currentBuild *Build) map[string]string {
 	environments := []string{}
 	environmentMap := map[string]string{}
 	var ok bool
@@ -114,11 +113,8 @@ func getDomainEnvironments(currentBuild *Build) []string {
 			}
 		}
 	}
-	for _, value := range environmentMap {
-		environments = append(environments, value)
-	}
 
-	return environments
+	return environmentMap
 }
 
 func postBuildImage(currentBuild *Build, err error) {

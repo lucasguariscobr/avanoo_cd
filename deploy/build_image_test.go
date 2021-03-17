@@ -39,21 +39,21 @@ func TestDomainEnvironments(t *testing.T) {
 				{Domain: "prodtest.avanoo.com", Branch: "development", Host: "prodtest", ExtraVars: map[string]string{}},
 			},
 			build: Build{BuildId: "1", Branch: "development", DomainNames: []string{"pre.avanoo.com", "prodtest.avanoo.com"}, Status: utils.StatusQueued},
-			expected: []string{"stage", "production"},
+			expected: map[string]string{"pre": "stage", "prodttest": "production"},
 		},
 		"pre": {
 			domains: []*Domain{
 				{Domain: "pre.avanoo.com", Branch: "development", Host: "pre", ExtraVars: map[string]string{}},
 			},
 			build: Build{BuildId: "1", Branch: "development", DomainNames: []string{"pre.avanoo.com"}, Status: utils.StatusQueued},
-			expected: []string{"stage"},
+			expected: map[string]string{"pre": "stage"},
 		},
 		"prod": {
 			domains: []*Domain{
 				{Domain: "prodtest.avanoo.com", Branch: "development", Host: "prodtest", ExtraVars: map[string]string{}},
 			},
 			build: Build{BuildId: "1", Branch: "development", DomainNames: []string{"prodtest.avanoo.com"}, Status: utils.StatusQueued},
-			expected: []string{"production"},
+			expected: map[string]string{"prodtest": "production"},
 		},
 	}
 	for _, value := range cases {
