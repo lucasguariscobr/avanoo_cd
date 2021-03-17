@@ -1,7 +1,7 @@
 package deploy
 
 import (
-	"avanoo_cd/utils"
+	"github.com/avanoo/avanoo_cd/utils"
 	"bytes"
 	"context"
 	"encoding/json"

@@ -1,14 +1,14 @@
 package server
 
 import (
-	"avanoo_cd/deploy"
-	"avanoo_cd/utils"
+	"github.com/avanoo/avanoo_cd/deploy"
+	"github.com/avanoo/avanoo_cd/utils"
 	"context"
 	"log"
 	"net/http"
 	"time"
 
-	_ "avanoo_cd/.docs"
+	_ "github.com/avanoo/avanoo_cd/.docs"
 
 	httpSwagger "github.com/swaggo/http-swagger"
 

@@ -1,7 +1,7 @@
 package environments
 
 import (
-	"avanoo_cd/utils"
+	"github.com/avanoo/avanoo_cd/utils"
 	"sync"
 )
 
