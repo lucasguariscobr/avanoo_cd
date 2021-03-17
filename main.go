@@ -1,9 +1,9 @@
 package main
 
 import (
-	"avanoo_cd/deploy"
-	"avanoo_cd/server"
-	"avanoo_cd/utils"
+	"github.com/avanoo/avanoo_cd/deploy"
+	"github.com/avanoo/avanoo_cd/server"
+	"github.com/avanoo/avanoo_cd/utils"
 	"log"
 	"os"
 	"os/signal"
