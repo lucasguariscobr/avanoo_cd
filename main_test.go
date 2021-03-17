@@ -1,7 +1,7 @@
 package main
 
 import (
-	"avanoo_cd/utils"
+	"github.com/avanoo/avanoo_cd/utils"
 	//"net/http"
 	"os"
 	"testing"
