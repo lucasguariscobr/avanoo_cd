@@ -99,7 +99,6 @@ func execBuildCommand(currentBuild *Build, commandExecutable string, commandArgs
 }
 
 func getDomainEnvironments(currentBuild *Build) map[string]string {
-	environments := []string{}
 	environmentMap := map[string]string{}
 	var ok bool
 	for _, domain := range currentBuild.Domains {
